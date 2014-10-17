@@ -1,13 +1,35 @@
 var express = require('express');
 var router = express.Router();
 var MongoClient = require('mongodb').MongoClient;
+var geoip = require('geoip-lite');
+var superagent = require('superagent');
+var geocoderProvider = 'google';
+var httpAdapter = 'http';
+var geocoder = require('node-geocoder').getGeocoder(geocoderProvider, httpAdapter);
 
+var weatherApi = process.env.WUNDERGROUND;
 var uristring = process.env.MONGOLAB_URI;
-
-
 
 /* GET home page. */
 router.get('/', function(req, res) {
+	var geo = geoip.lookup(req.ip);
+
+	geocoder.reverse(geo.ll[0], geo.ll[1], function(err, geores) {
+
+		var url = 'http://api.wunderground.com/api/'+weatherApi+'/conditions/q/'+geores[0].country+'/'+geo.city+'.json';
+
+		superagent.get(url, function(response){
+		  res.render('index', JSON.parse(response.text));
+		});
+	});
+	
+		
+
+
+});
+
+/* GET Melourne page. */
+router.get('/melbourne', function(req, res) {
 
 	MongoClient.connect(uristring, function (err, db) {
 		if (err) throw err;
@@ -23,4 +45,6 @@ router.get('/', function(req, res) {
 
 });
 
+
 module.exports = router;
+ 
