@@ -13,7 +13,9 @@ var uristring = process.env.MONGOLAB_URI;
 /* GET home page. */
 router.get('/', function(req, res) {
 	var geo = geoip.lookup(req.ip);
-
+	console.log(req.connection.remoteAddress);
+	console.log(req.ip);
+	if (geo == null){geo = geoip.lookup('203.206.140.39');}
 	geocoder.reverse(geo.ll[0], geo.ll[1], function(err, geores) {
 
 		var url = 'http://api.wunderground.com/api/'+weatherApi+'/conditions/q/'+geores[0].country+'/'+geo.city+'.json';
