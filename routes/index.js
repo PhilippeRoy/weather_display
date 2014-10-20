@@ -7,23 +7,24 @@ var geocoderProvider = 'google';
 var httpAdapter = 'http';
 var geocoder = require('node-geocoder').getGeocoder(geocoderProvider, httpAdapter);
 
-var weatherApi = process.env.WUNDERGROUND ;
-var uristring = process.env.MONGOLAB_URI ;
+var weatherApi = process.env.WUNDERGROUND || 'bcd80ed63443d581';
+var uristring = process.env.MONGOLAB_URI || 'mongodb://heroku_app30267121:fkogs2hsmp6lgjjjks8r8ullb8@ds043170.mongolab.com:43170/heroku_app30267121';
+
+var moment = require('moment');
 
 module.exports = router;
 
-
 /* GET home page. */
 router.get('/', function(req, res) {
+
 	var geo = geoip.lookup(req.ip);
 	if (geo == null){geo = geoip.lookup('203.206.140.39');}
 	geocoder.reverse(geo.ll[0], geo.ll[1], function(err, geores) {
 
-		var url = 'http://api.wunderground.com/api/'+weatherApi+'/conditions/q/'+geores[0].country+'/'+geo.city+'.json';
-
-		superagent.get(url, function(response){
-		  res.render('index', JSON.parse(response.text));
-		});
+		var country = geores[0].country;
+		var city = geo.city;
+		
+		getWeatherData(country, city, res);
 	});
 });
 
@@ -48,12 +49,58 @@ router.get('/melbourne', function(req, res) {
 router.get('/:country/:city', function(req, res) {
 	var country = req.params.country;
 	var city = req.params.city;
-	var url = 'http://api.wunderground.com/api/'+weatherApi+'/conditions/q/'+country+'/'+city+'.json';
-	if(process.env.ENV === 'dev'){
-		console.log(url);
-	}
-	superagent.get(url, function(response){
-	  res.render('index', JSON.parse(response.text));
-	});
 
+	getWeatherData(country, city, res);
 });
+
+
+
+function getWeatherData(country, city, res) {
+	var weatherURL = 'http://api.wunderground.com/api/'+weatherApi+'/conditions/q/'+country+'/'+city+'.json';
+	var astronomyURL = 'http://api.wunderground.com/api/'+weatherApi+'/astronomy/q/'+country+'/'+city+'.json';
+
+	/* First Request to check sunrise and sunset hours */
+	superagent.get(astronomyURL, function(response){
+
+		var data = JSON.parse(response.text);
+		var sunrise;
+		var sundown;
+
+		if (data.response.hasOwnProperty('results')) {
+			sunrise = 6;
+			sundown = 20;
+		} else {
+			sunrise = data.sun_phase.sunrise.hour;
+		    sundown = data.sun_phase.sunset.hour;
+		}
+		
+	
+		/* SEcond Request to weather*/
+	  	superagent.get(weatherURL, function(response){
+
+	  		var data = JSON.parse(response.text);
+
+	  		/* Error handing */
+	  		if (data.response.hasOwnProperty('results')) {
+	  			res.render('chooseLocation');
+	  			return;
+	  		}
+
+	  		var str = data.current_observation.local_time_rfc822.toString();
+	  		/* Get Current Time */
+	  		var h = moment(str, 'ddd, DD MMM YYYY HH:mm:ss').get('hour');
+	  		console.log(h);
+
+	  		/* Compare time against sunset and hours and prefix icon */
+	  		if (h < sunrise.toString() || h > sundown.toString()){
+	  			var prevVal = data.current_observation.icon;
+	  			data.current_observation.icon = 'nt_' + prevVal;
+
+	  			res.render('index', data);
+			} else {
+
+	  			res.render('index', JSON.parse(response.text));
+			}
+		});
+	});
+}
