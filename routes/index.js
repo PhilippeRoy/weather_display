@@ -7,14 +7,15 @@ var geocoderProvider = 'google';
 var httpAdapter = 'http';
 var geocoder = require('node-geocoder').getGeocoder(geocoderProvider, httpAdapter);
 
-var weatherApi = process.env.WUNDERGROUND;
-var uristring = process.env.MONGOLAB_URI;
+var weatherApi = process.env.WUNDERGROUND ;
+var uristring = process.env.MONGOLAB_URI ;
+
+module.exports = router;
+
 
 /* GET home page. */
 router.get('/', function(req, res) {
 	var geo = geoip.lookup(req.ip);
-	console.log(req.connection.remoteAddress);
-	console.log(req.ip);
 	if (geo == null){geo = geoip.lookup('203.206.140.39');}
 	geocoder.reverse(geo.ll[0], geo.ll[1], function(err, geores) {
 
@@ -24,10 +25,6 @@ router.get('/', function(req, res) {
 		  res.render('index', JSON.parse(response.text));
 		});
 	});
-	
-		
-
-
 });
 
 /* GET Melourne page. */
@@ -47,6 +44,16 @@ router.get('/melbourne', function(req, res) {
 
 });
 
+ /* GET City . */
+router.get('/:country/:city', function(req, res) {
+	var country = req.params.country;
+	var city = req.params.city;
+	var url = 'http://api.wunderground.com/api/'+weatherApi+'/conditions/q/'+country+'/'+city+'.json';
+	if(process.env.ENV === 'dev'){
+		console.log(url);
+	}
+	superagent.get(url, function(response){
+	  res.render('index', JSON.parse(response.text));
+	});
 
-module.exports = router;
- 
+});
