@@ -66,7 +66,7 @@ function getWeatherData(country, city, res) {
 		var sunrise;
 		var sundown;
 
-		if (data.response.hasOwnProperty('results')) {
+		if (!data.hasOwnProperty('sun_phase')) {
 			sunrise = 6;
 			sundown = 20;
 		} else {
@@ -79,9 +79,10 @@ function getWeatherData(country, city, res) {
 	  	superagent.get(weatherURL, function(response){
 
 	  		var data = JSON.parse(response.text);
+		console.log(data);
 
 	  		/* Error handing */
-	  		if (data.response.hasOwnProperty('results')) {
+	  		if (!data.hasOwnProperty('current_observation')) {
 	  			res.render('chooseLocation');
 	  			return;
 	  		}
@@ -89,7 +90,6 @@ function getWeatherData(country, city, res) {
 	  		var str = data.current_observation.local_time_rfc822.toString();
 	  		/* Get Current Time */
 	  		var h = moment(str, 'ddd, DD MMM YYYY HH:mm:ss').get('hour');
-	  		console.log(h);
 
 	  		/* Compare time against sunset and hours and prefix icon */
 	  		if (h < sunrise.toString() || h > sundown.toString()){
